@@ -1,6 +1,7 @@
 package com.ayc.keycloaksecurity.util;
 
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
+import org.keycloak.authorization.client.AuthorizationDeniedException;
 import org.keycloak.representations.AccessToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
@@ -35,5 +36,21 @@ public class SecurityUtil {
 
     public String getKeycloakId() {
         return getAccessToken().getId();
+    }
+
+    public String getEmail() {
+        return getAccessToken().getEmail();
+    }
+
+    public boolean isAdminOrUser(String username) {
+        if (getUsername().equals(username) || isAdmin()) {
+            return true;
+        } else {
+            throw new AuthorizationDeniedException(new Throwable("Zugriff verweigert"));
+        }
+    }
+
+    public boolean isAdmin() {
+        return getAccessToken().getRealmAccess().equals("admin");
     }
 }
