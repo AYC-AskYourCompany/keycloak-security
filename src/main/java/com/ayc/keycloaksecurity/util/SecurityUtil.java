@@ -1,5 +1,9 @@
 package com.ayc.keycloaksecurity.util;
 
+import com.ayc.exceptionhandler.config.EnableAycExceptionHandling;
+import com.ayc.exceptionhandler.exception.NotAuthorizedException;
+import com.ayc.keycloaksecurity.consts.ErrorConst;
+import com.ayc.keycloaksecurity.consts.SecurityConst;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.keycloak.authorization.client.AuthorizationDeniedException;
 import org.keycloak.representations.AccessToken;
@@ -12,6 +16,7 @@ import javax.servlet.http.HttpServletRequest;
 
 @Service
 @Primary
+@EnableAycExceptionHandling
 public class SecurityUtil {
 
     @Autowired
@@ -20,8 +25,7 @@ public class SecurityUtil {
     public KeycloakAuthenticationToken getPrincipal() {
         KeycloakAuthenticationToken principal = (KeycloakAuthenticationToken) request.getUserPrincipal();
         if (principal == null) {
-            throw new AuthenticationServiceException(
-                    "No user details found, while trying to access user principal. Check if user is logged in and authentication is required.");
+            throw new AuthenticationServiceException(ErrorConst.NO_USER_FOUND);
         }
         return principal;
     }
@@ -30,27 +34,31 @@ public class SecurityUtil {
         return getPrincipal().getAccount().getKeycloakSecurityContext().getToken();
     }
 
-    public String getUsername() {
-        return getAccessToken().getName();
-    }
-
     public String getKeycloakId() {
         return getAccessToken().getId();
+    }
+
+    public String getUsername() {
+        return getAccessToken().getPreferredUsername();
+    }
+
+    public String getFullName() {
+        return getAccessToken().getName();
     }
 
     public String getEmail() {
         return getAccessToken().getEmail();
     }
 
-    public boolean isAdminOrUser(String username) {
+    public boolean isAdminOrUser(String username) throws NotAuthorizedException {
         if (getUsername().equals(username) || isAdmin()) {
             return true;
         } else {
-            throw new AuthorizationDeniedException(new Throwable("Zugriff verweigert"));
+            throw new NotAuthorizedException(ErrorConst.NOT_AUTHORIZED);
         }
     }
 
     public boolean isAdmin() {
-        return getAccessToken().getRealmAccess().equals("admin");
+        return getAccessToken().getRealmAccess().getRoles().stream().anyMatch(role -> role.equals(SecurityConst.ADMIN_ROLE));
     }
 }
